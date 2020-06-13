@@ -1,4 +1,4 @@
 # hello-world
-my first repository description
-editing readme
-this is more commiting/editing to readme file
+Every programe world start
+with Hello world! do you know
+why becouse we are humans, after all

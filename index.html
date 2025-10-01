@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP8266 LED & OLED Control</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <style>
+    body { text-align:center; font-family:sans-serif; margin-top:30px; }
+    button { padding:10px 20px; margin:10px; font-size:16px; cursor:pointer; }
+    #ledStatus { font-weight:bold; }
+    textarea { width:300px; height:80px; margin-top:15px; }
+  </style>
+</head>
+<body>
+  <h2>ESP8266 LED + OLED Control</h2>
+
+  <!-- LED Control -->
+  <button id="onBtn" onclick="sendLED('ON')">Turn ON</button>
+  <button id="offBtn" onclick="sendLED('OFF')">Turn OFF</button>
+  <h3>LED Status: <span id="ledStatus">Connecting...</span></h3>
+
+  <!-- OLED Message -->
+  <h3>Send Text to OLED</h3>
+  <textarea id="msgBox" placeholder="Type your message here..."></textarea><br>
+  <button onclick="sendText()">Send Message</button>
+
+  <script>
+    // MQTT client
+    var client = new Paho.MQTT.Client("test.mosquitto.org", 8081, "webClient-" + Math.floor(Math.random()*10000));
+
+    client.onConnectionLost = function(responseObject) {
+      console.log("Connection lost: " + responseObject.errorMessage);
+      document.getElementById("ledStatus").innerText = "Disconnected";
+    };
+
+    client.onMessageArrived = function(message) {
+      console.log("Message received: " + message.destinationName + " = " + message.payloadString);
+      if (message.destinationName === "esp8266/led/status") {
+        updateStatus(message.payloadString);
+      }
+    };
+
+    client.connect({
+      onSuccess: function() {
+        console.log("Connected to broker");
+        client.subscribe("esp8266/led/status");  // listen for LED updates
+      }
+    });
+
+    function sendLED(msg) {
+      var message = new Paho.MQTT.Message(msg);
+      message.destinationName = "esp8266/led";
+      client.send(message);
+      console.log("Sent LED: " + msg);
+    }
+
+    function sendText() {
+      var text = document.getElementById("msgBox").value;
+      if (text.trim().length > 0) {
+        var message = new Paho.MQTT.Message(text);
+        message.destinationName = "esp8266/oled/text";
+        client.send(message);
+        console.log("Sent Text: " + text);
+      }
+    }
+
+    function updateStatus(state) {
+      document.getElementById("ledStatus").innerText = state;
+      if (state === "ON") {
+        document.getElementById("onBtn").disabled = true;
+        document.getElementById("offBtn").disabled = false;
+      } else if (state === "OFF") {
+        document.getElementById("onBtn").disabled = false;
+        document.getElementById("offBtn").disabled = true;
+      }
+    }
+  </script>
+</body>
+</html>
